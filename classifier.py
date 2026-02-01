@@ -1,0 +1,333 @@
+# classifier.py (Fixed to handle model input size requirements with grid numbers)
+import numpy as np
+import cv2
+import logging
+from pathlib import Path
+import hashlib
+import json
+import time
+from typing import Tuple, Dict, Any, List
+import sqlite3
+import re
+
+from tensorflow.keras.models import load_model # type: ignore
+from tensorflow.keras.preprocessing.image import img_to_array, load_img # type: ignore
+
+# ---------------------------
+# Logging Configuration
+# ---------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# ---------------------------
+# Custom Exceptions
+# ---------------------------
+class AuthenticationError(Exception):
+    pass
+
+class RegistrationError(Exception):
+    pass
+
+class ModelLoadError(Exception):
+    pass
+
+class ImageProcessingError(Exception):
+    pass
+
+# ---------------------------
+# Database Manager
+# ---------------------------
+class DatabaseManager:
+    def __init__(self, db_file: str = "users.db"):
+        self.db_file = Path(db_file)
+        self._init_db()
+
+    def _init_db(self):
+        conn = sqlite3.connect(self.db_file)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                email TEXT UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        conn.close()
+
+    def add_user(self, username: str, password_hash: str, email: str = None):
+        conn = sqlite3.connect(self.db_file)
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                'INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
+                (username, password_hash, email)
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            raise RegistrationError("Username or email already exists")
+        finally:
+            conn.close()
+
+    def get_user(self, username: str):
+        conn = sqlite3.connect(self.db_file)
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT username, password_hash FROM users WHERE username = ?',
+            (username,)
+        )
+        user = cursor.fetchone()
+        conn.close()
+        return user
+
+    def update_last_login(self, username: str):
+        conn = sqlite3.connect(self.db_file)
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = ?',
+            (username,)
+        )
+        conn.commit()
+        conn.close()
+
+# ---------------------------
+# Authentication Manager
+# ---------------------------
+class AuthenticationManager:
+    def __init__(self, db_file: str = "users.db"):
+        self.db_manager = DatabaseManager(db_file)
+        self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.failed_attempts: Dict[str, int] = {}
+        self.max_login_attempts = 3
+        self.session_timeout = 3600  # 1 hour
+
+    def _hash_password(self, password: str) -> str:
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    def validate_password_strength(self, password: str) -> bool:
+        if len(password) < 8:
+            return False
+        if not re.search(r"[A-Z]", password):
+            return False
+        if not re.search(r"[a-z]", password):
+            return False
+        if not re.search(r"\d", password):
+            return False
+        return True
+
+    def register_user(self, username: str, password: str, email: str = None) -> bool:
+        if not username or not password:
+            raise RegistrationError("Username and password are required")
+        
+        if len(username) < 3:
+            raise RegistrationError("Username must be at least 3 characters long")
+        
+        if not self.validate_password_strength(password):
+            raise RegistrationError(
+                "Password must be at least 8 characters long and contain uppercase, "
+                "lowercase letters and numbers"
+            )
+        
+        if email and not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            raise RegistrationError("Invalid email format")
+
+        password_hash = self._hash_password(password)
+        self.db_manager.add_user(username, password_hash, email)
+        logger.info(f"User '{username}' registered successfully")
+        return True
+
+    def authenticate(self, username: str, password: str) -> str:
+        if self.failed_attempts.get(username, 0) >= self.max_login_attempts:
+            raise AuthenticationError("Account temporarily locked due to too many failed attempts")
+
+        user = self.db_manager.get_user(username)
+        if user and user[1] == self._hash_password(password):
+            self.failed_attempts[username] = 0
+            self.db_manager.update_last_login(username)
+            token = hashlib.sha256(f"{username}{time.time()}".encode()).hexdigest()
+            self.sessions[token] = {
+                "username": username,
+                "created_at": time.time()
+            }
+            logger.info(f"User '{username}' authenticated successfully")
+            return token
+        else:
+            self.failed_attempts[username] = self.failed_attempts.get(username, 0) + 1
+            remaining = self.max_login_attempts - self.failed_attempts[username]
+            raise AuthenticationError(f"Invalid credentials. {remaining} attempts left.")
+
+    def validate_session(self, token: str) -> bool:
+        session = self.sessions.get(token)
+        if not session:
+            return False
+        if time.time() - session["created_at"] > self.session_timeout:
+            del self.sessions[token]
+            return False
+        return True
+
+    def logout(self, token: str):
+        if token in self.sessions:
+            user = self.sessions[token]["username"]
+            del self.sessions[token]
+            logger.info(f"User '{user}' logged out")
+
+# ---------------------------
+# Satellite Image Classifier
+# ---------------------------
+class SatelliteImageClassifier:
+    def __init__(self, authentication_enabled: bool = True):
+        self.model = None
+        self.model_path: Path | None = None
+        self.auth_enabled = authentication_enabled
+        self.auth_manager = AuthenticationManager() if authentication_enabled else None
+        self.session_token: str | None = None
+
+        # Grid size for visualization (smaller for more detailed classification)
+        self.grid_size = 32
+        
+        # Model input size (required by the model)
+        self.model_input_size = (64, 64)
+        
+        # Overall image input size
+        self.input_size = (256, 256)
+        self.supported_extensions = [".jpg", ".jpeg", ".png", ".tiff"]
+
+        self.class_colors: Dict[int, List[int]] = {
+            0: [144, 238, 144], 1: [34, 139, 34], 2: [173, 255, 47],
+            3: [169, 169, 169], 4: [211, 211, 211], 5: [255, 255, 224],
+            6: [255, 165, 0], 7: [255, 69, 0], 8: [0, 0, 255], 9: [135, 206, 235]
+        }
+        self.class_names: List[str] = [
+            'AnnualCrop', 'Forest', 'HerbaceousVegetation', 'Highway', 'Industrial',
+            'Pasture', 'PermanentCrop', 'Residential', 'River', 'SeaLake'
+        ]
+        logger.info("Satellite Image Classifier initialized")
+
+    # ---------------------------
+    # User Management
+    # ---------------------------
+    def register_user(self, username: str, password: str, email: str = None) -> bool:
+        if not self.auth_enabled:
+            return True
+        return self.auth_manager.register_user(username, password, email)
+
+    def authenticate_user(self, username: str, password: str) -> bool:
+        if not self.auth_enabled:
+            self.session_token = "demo_session"
+            return True
+        self.session_token = self.auth_manager.authenticate(username, password)
+        return True
+
+    def validate_session(self) -> bool:
+        if not self.auth_enabled:
+            return True
+        return self.auth_manager.validate_session(self.session_token)
+
+    def logout(self):
+        if self.auth_enabled and self.session_token:
+            self.auth_manager.logout(self.session_token)
+            self.session_token = None
+
+    # ---------------------------
+    # Model Loading
+    # ---------------------------
+    def load_model(self, model_path: str):
+        if not self.validate_session():
+            raise AuthenticationError("Session expired")
+        path = Path(model_path)
+        if not path.exists() or path.suffix not in [".h5", ".keras"]:
+            raise ModelLoadError("Invalid model file")
+        self.model = load_model(path)
+        self.model_path = path
+        logger.info(f"Model loaded from {path}")
+
+    # ---------------------------
+    # Image Handling
+    # ---------------------------
+    def _validate_image_path(self, image_path: str):
+        path = Path(image_path)
+        if not path.exists() or path.suffix.lower() not in self.supported_extensions:
+            raise ImageProcessingError("Invalid image file")
+        return True
+
+    def load_image(self, image_path: str) -> np.ndarray:
+        if not self.validate_session():
+            raise AuthenticationError("Session expired")
+        self._validate_image_path(image_path)
+        image = load_img(image_path, target_size=self.input_size)
+        image = img_to_array(image) / 255.0
+        return image
+
+    def divide_image_into_grids(self, image: np.ndarray, grid_size: int) -> np.ndarray:
+        h, w, _ = image.shape
+        grids = []
+        for y in range(0, h, grid_size):
+            for x in range(0, w, grid_size):
+                grid = image[y:y+grid_size, x:x+grid_size]
+                if grid.shape[0] != grid_size or grid.shape[1] != grid_size:
+                    grid = cv2.resize(grid, (grid_size, grid_size))
+                grids.append(grid)
+        return np.array(grids)
+
+    # ---------------------------
+    # Colorization & Visualization
+    # ---------------------------
+    def colorize_grids(self, original_image: np.ndarray, predictions: np.ndarray) -> np.ndarray:
+        h, w, _ = original_image.shape
+        colored_image = np.zeros_like(original_image)
+        idx = 0
+        for y in range(0, h, self.grid_size):
+            for x in range(0, w, self.grid_size):
+                if idx >= len(predictions):
+                    break
+                color = np.array(self.class_colors[predictions[idx]]) / 255.0
+                actual_h = min(self.grid_size, h - y)
+                actual_w = min(self.grid_size, w - x)
+                resized_color = cv2.resize(np.full((self.grid_size, self.grid_size, 3), color),
+                                           (actual_w, actual_h))
+                colored_image[y:y+actual_h, x:x+actual_w] = resized_color
+                cv2.rectangle(colored_image, (x, y), (x+actual_w, y+actual_h), (0,0,0), 1)
+                
+                # Add grid index number with smaller font for more grids
+                font_scale = 0.3  # Smaller font size for more grids
+                font_thickness = 1
+                text_pos = (x + 2, y + 10)  # Position in top-left corner
+                
+                # Only show number if grid is large enough
+                if self.grid_size >= 20:
+                    cv2.putText(colored_image, str(idx), text_pos,
+                                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (1,1,1), font_thickness)
+                idx += 1
+        return colored_image
+
+    # ---------------------------
+    # Full Image Processing
+    # ---------------------------
+    def process_image(self, image_path: str) -> Tuple[np.ndarray, np.ndarray]:
+        if not self.validate_session():
+            raise AuthenticationError("Session expired")
+        if not self.model:
+            raise ModelLoadError("Load a model first")
+        
+        # Load the image
+        image = self.load_image(image_path)
+        
+        # Divide into smaller grids for visualization
+        grids = self.divide_image_into_grids(image, self.grid_size)
+        
+        # Resize grids to match model input size
+        resized_grids = np.array([cv2.resize(grid, self.model_input_size) for grid in grids])
+        
+        # Make predictions
+        predictions = np.argmax(self.model.predict(resized_grids, verbose=0), axis=1)
+        
+        # Create colored visualization with original grid size
+        colored_image = self.colorize_grids(image, predictions)
+        
+        return image, colored_image
