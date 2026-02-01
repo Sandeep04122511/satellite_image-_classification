@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Image Classification | CNN Project</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-text: #2c3e50;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            padding-top: 56px;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .logo-img {
+            height: 40px;
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 80px 0;
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            border-left: 4px solid var(--secondary-color);
+            padding-left: 15px;
+            margin: 30px 0 20px 0;
+        }
+        
+        .tech-badge {
+            margin: 5px;
+            transition: transform 0.3s ease;
+        }
+        
+        .tech-badge:hover {
+            transform: translateY(-3px);
+        }
+        
+        .class-grid img {
+            border-radius: 8px;
+            margin: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .class-grid img:hover {
+            transform: scale(1.05);
+        }
+        
+        .methodology-card {
+            border-left: 3px solid var(--secondary-color);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .methodology-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .result-image {
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+        
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar with Logo -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="path/to/your/logo.png" alt="Satellite Classification Logo" class="logo-img">
+                Satellite Classification
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#introduction">Introduction</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#dataset">Dataset</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#methodology">Methodology</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#results">Results</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#usage">Usage</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold">Satellite Image Classification</h1>
+            <p class="lead">Using Convolutional Neural Networks for Land Cover Analysis</p>
+            <div class="mt-4">
+                <img src="Resources/Satellite Image Classification.png" alt="Project Overview" class="img-fluid rounded shadow-lg" style="max-width: 80%;">
+            </div>
+        </div>
+    </header>
+
+    <!-- Technology Badges -->
+    <section class="container text-center my-5">
+        <h3 class="section-title">Technologies Used</h3>
+        <div>
+            <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" class="tech-badge">
+            <img src="https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" alt="TensorFlow" class="tech-badge">
+            <img src="https://img.shields.io/badge/Keras-D00000?style=for-the-badge&logo=keras&logoColor=white" alt="Keras" class="tech-badge">
+            <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" alt="Scikit-learn" class="tech-badge">
+            <img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" alt="NumPy" class="tech-badge">
+            <img src="https://img.shields.io/badge/Matplotlib-3776AB?style=for-the-badge&logo=matplotlib&logoColor=white" alt="Matplotlib" class="tech-badge">
+            <img src="https://img.shields.io/badge/Tkinter-white?style=for-the-badge&logo=python&logoColor=blue" alt="Tkinter" class="tech-badge">
+        </div>
+    </section>
+
+    <!-- Introduction -->
+    <section id="introduction" class="container my-5">
+        <h3 class="section-title">Introduction</h3>
+        <div class="row">
+            <div class="col-md-8">
+                <p>Satellite image classification plays a crucial role in applications such as land cover mapping, urban planning, and environmental monitoring. This project leverages deep learning, particularly CNNs, to classify satellite images into ten categories: AnnualCrop, Forest, HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, and SeaLake.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="card methodology-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Key Achievement</h5>
+                        <p class="card-text">96% classification accuracy on test dataset using custom SpectrumNet architecture.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dataset -->
+    <section id="dataset" class="container my-5">
+        <h3 class="section-title">Dataset</h3>
+        <p>The dataset comprises 27,000 labeled images of various land use and land cover types. The images are 64x64 pixels and categorized into the following classes:</p>
+        
+        <div class="class-grid text-center">
+            <img src="Resources/Classes/AnnualCrop.jpg" alt="Annual Crop" width="100" height="100">
+            <img src="Resources/Classes/Forest.jpg" alt="Forest" width="100" height="100">
+            <img src="Resources/Classes/HerbaceousVegetation.jpg" alt="Herbaceous Vegetation" width="100" height="100">
+            <img src="Resources/Classes/Highway.jpg" alt="Highway" width="100" height="100">
+            <img src="Resources/Classes/Industrial.jpg" alt="Industrial" width="100" height="100">
+            <img src="Resources/Classes/Pasture.jpg" alt="Pasture" width="100" height="100">
+            <img src="Resources/Classes/PermanentCrop.jpg" alt="Permanent Crop" width="100" height="100">
+            <img src="Resources/Classes/Residential.jpg" alt="Residential" width="100" height="100">
+            <img src="Resources/Classes/River.jpg" alt="River" width="100" height="100">
+            <img src="Resources/Classes/SeaLake.jpg" alt="Sea Lake" width="100" height="100">
+        </div>
+    </section>
+
+    <!-- Methodology -->
+    <section id="methodology" class="container my-5">
+        <h3 class="section-title">Methodology</h3>
+        <div class="row">
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card methodology-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Preprocessing</h5>
+                        <p class="card-text">Normalization, tensor conversion, one-hot encoding, dataset splitting, and data augmentation techniques.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card methodology-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Model Building</h5>
+                        <p class="card-text">Custom CNN architecture with convolutional and spectral blocks, batch normalization, and ReLU activation.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card methodology-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Model Training</h5>
+                        <p class="card-text">SGD with momentum, categorical cross-entropy, class weights adjustment, and early stopping.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card methodology-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Model Evaluation</h5>
+                        <p class="card-text">Accuracy metrics and confusion matrices to assess performance and generalization ability.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <img src="Resources/architecture_cnn.png" alt="CNN Architecture" class="img-fluid result-image" style="max-width: 300px;">
+        </div>
+    </section>
+
+    <!-- Results -->
+    <section id="results" class="container my-5">
+        <h3 class="section-title">Results</h3>
+        <div class="text-center">
+            <img src="Resources/labels.png" alt="Classification Labels" class="img-fluid result-image">
+            <img src="Resources/Results/Result1.png" alt="Result 1" class="img-fluid result-image">
+            <img src="Resources/Results/Result2.png" alt="Result 2" class="img-fluid result-image">
+            <img src="Resources/Results/Result3.png" alt="Result 3" class="img-fluid result-image">
+        </div>
+    </section>
+
+    <!-- Usage -->
+    <section id="usage" class="container my-5">
+        <h3 class="section-title">Usage</h3>
+        <div class="row">
+            <div class="col-md-8">
+                <p>To use the graphical interface for classifying satellite images:</p>
+                <ol>
+                    <li>Run the GUI application: <code>python classifierApp.py</code></li>
+                    <li><strong>Select a Model</strong>: Click on the "Select Model" button and choose the trained model file (<code>.keras/.h5</code>)</li>
+                    <li><strong>Select an Image</strong>: Once a model is loaded, click on the "Select Image" button and choose the satellite image</li>
+                    <li><strong>View Results</strong>: The application displays the original image and colorized classification map</li>
+                </ol>
+            </div>
+            <div class="col-md-4">
+                <img src="Resources/InterfazResult.png" alt="GUI Interface" class="img-fluid result-image">
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p> Final year Satellite Image Classification Project</p>
+            <p>Project-phase-2</p>
+            
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
