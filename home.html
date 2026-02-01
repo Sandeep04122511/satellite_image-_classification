@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* General */
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f4f8fc;
+  }
+
+  section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    margin-top: 1.8rem;
+  }
+
+  h1, h2, h3 {
+    font-weight: 600;
+    color: #1c2b4d;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    color: #2a3b5f;
+    text-align: center;
+  }
+
+  p {
+    margin: 0.7rem auto;
+    line-height: 1.7;
+    color: #555;
+    font-size: 1rem;
+    max-width: 800px;
+  }
+
+  strong { color: #222; }
+
+  /* Hero Section */
+  .hero {
+    text-align: center;
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+      url("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/BlueMarble-2001-2002.jpg/800px-BlueMarble-2001-2002.jpg") no-repeat center/cover;
+    color: #fff;
+    border-radius: 14px;
+    padding: 3rem 2rem;
+  }
+
+  .hero p {
+    color: #f1f1f1;
+  }
+
+  .actions {
+    margin: 1.5rem 0;
+  }
+
+  .btn, .btn-ghost {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0.4rem;
+    transition: all 0.25s ease;
+  }
+
+  .btn {
+    background: #007BFF;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+  }
+  .btn:hover {
+    background: #0056b3;
+    transform: translateY(-3px);
+  }
+
+  .btn-ghost {
+    border: 2px solid #fff;
+    color: #fff;
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: #fff;
+    color: #007BFF;
+  }
+
+  /* How it Works Section */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+  }
+
+  .step-card {
+    background: #f9fbff;
+    border: 1px solid #e0e6f0;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  }
+
+  .step-card:hover {
+    background: #007BFF;
+    color: #fff;
+    transform: translateY(-6px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+
+  .step-card h4 {
+    font-size: 1.2rem;
+    margin-top: 0.8rem;
+  }
+
+  .step-card p {
+    font-size: 0.95rem;
+    color: inherit;
+  }
+
+  .step-icon {
+    font-size: 2rem;
+    color: #007BFF;
+  }
+
+  .step-card:hover .step-icon {
+    color: #fff;
+  }
+
+  /* Logged-in Cards */
+  .card-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+
+  .card {
+    flex: 1 1 220px;
+    background: #f9fbff;
+    border: 1px solid #e0e6f0;
+    padding: 1.8rem;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    color: #007BFF;
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+  }
+
+  .card:hover {
+    background: #007BFF;
+    color: #fff;
+    transform: translateY(-6px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    h1 { font-size: 1.9rem; }
+    h2 { font-size: 1.5rem; }
+    .card-row { flex-direction: column; }
+  }
+</style>
+
+{% if not logged_in %}
+<section class="hero">
+  <h1>🌍 Satellite Image Classification & Analysis</h1>
+  <p>
+    Upload satellite images and instantly get classification using our trained CNN,
+    plus visual analysis.
+  </p>
+  
+  <div class="actions">
+    <a class="btn" href="{{ url_for('signup') }}">🚀 Create an account</a>
+    <a class="btn-ghost" href="{{ url_for('login') }}">🔑 Sign in</a>
+  </div>
+</section>
+
+<section>
+  <h3>⚡ How it Works</h3>
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-icon">📝</div>
+      <h4>Sign Up / Log In</h4>
+      <p>Create your account and access the app.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-icon">🛰️</div>
+      <h4>Upload Image</h4>
+      <p>Upload an RGB satellite image (JPG/PNG).</p>
+    </div>
+    <div class="step-card">
+      <div class="step-icon">🤖</div>
+      <h4>AI Prediction</h4>
+      <p>The CNN model predicts the class with confidence.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-icon">🔍</div>
+      <h4>Image Analysis</h4>
+      <p>OpenCV generates grayscale, edges & NDVI-like visuals.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-icon">📊</div>
+      <h4>Dashboard & Stats</h4>
+      <p>View history and aggregated insights anytime.</p>
+    </div>
+  </div>
+</section>
+{% else %}
+<section>
+  <h2>Welcome, {{ session.get('username') }} 👋</h2>
+  <p>You have uploaded <strong>{{ upload_count }}</strong> image(s).</p>
+  <div class="card-row">
+    <a class="card" href="{{ url_for('upload') }}">📤 Upload & Analyze</a>
+    <a class="card" href="{{ url_for('history') }}">🕘 My Upload History</a>
+    <a class="card" href="{{ url_for('dashboard') }}">📈 Dashboard</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

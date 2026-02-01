@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* Fullscreen background */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    background: url("https://upload.wikimedia.org/wikipedia/commons/e/e8/BlueMarble-2001-2002.jpg") no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  /* Overlay */
+  .overlay {
+    background: rgba(0, 0, 0, 0.6);
+    min-height: 100vh;
+    width: 100%;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* Container */
+  .history-container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    max-width: 1100px;
+    width: 100%;
+    animation: fadeIn 0.8s ease;
+  }
+
+  h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #222;
+  }
+
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .history-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .history-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+
+  .history-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-bottom: 1px solid #eee;
+  }
+
+  .meta {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .meta p {
+    margin: 0.4rem 0;
+    font-size: 0.92rem;
+    color: #555;
+  }
+
+  .meta strong {
+    font-size: 1rem;
+    color: #222;
+  }
+
+  .btn-ghost {
+    margin-top: 0.6rem;
+    display: inline-block;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid #007BFF;
+    border-radius: 6px;
+    background: transparent;
+    color: #007BFF;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-ghost:hover {
+    background: #007BFF;
+    color: #fff;
+  }
+
+  /* Red button for delete */
+  .btn-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+
+  .btn-danger:hover {
+    background: #dc3545;
+    color: #fff;
+  }
+
+  p a {
+    color: #007BFF;
+    text-decoration: underline;
+  }
+
+  /* Fade-in effect */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="overlay">
+  <div class="history-container">
+    <h2>📂 My Upload History</h2>
+    {% if uploads %}
+      <div class="history-grid">
+        {% for u in uploads %}
+        <div class="history-card">
+          <img src="{{ url_for('static', filename=u.analysis_images.orig) }}" alt="thumb">
+          <div class="meta">
+            <p><strong>{{ u.orig_filename }}</strong></p>
+            <p>Predicted: {{ u.predicted_class }} ({{ "%.2f"|format(u.confidence) }}%)</p>
+            <p>Uploaded: {{ u.upload_time }}</p>
+
+            <a class="btn-ghost" href="{{ url_for('analysis_view', upload_id=u.id) }}">View Analysis</a>
+
+            <form method="POST" action="{{ url_for('delete_upload', upload_id=u.id) }}"
+                  onsubmit="return confirm('Are you sure you want to delete this upload?');">
+              <button type="submit" class="btn-ghost btn-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="text-align:center;">No uploads yet. <a href="{{ url_for('upload') }}">Upload one now</a>.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

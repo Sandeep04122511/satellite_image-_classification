@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+.left, .right {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #333;
+}
+h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+    color: #444;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.4rem;
+}
+p, li {
+    font-size: 0.95rem;
+    color: #555;
+}
+ul {
+    padding-left: 1.2rem;
+    margin-bottom: 1rem;
+}
+.btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.6rem 1.2rem;
+    background: #007BFF;
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+.btn:hover {
+    background: #0056b3;
+}
+.analysis-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+figure {
+    text-align: center;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 0.5rem;
+    transition: transform 0.2s;
+}
+figure:hover {
+    transform: scale(1.05);
+}
+figcaption {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.4rem;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+canvas {
+    margin-top: 1rem;
+    max-width: 100%;
+}
+@media(max-width:900px){
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.conf-bar {
+    width: 100%;
+    background: #eee;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    height: 20px;
+}
+.conf-fill {
+    height: 100%;
+    background: #28a745;
+    border-radius: 6px;
+}
+</style>
+
+<h2>Analysis: {{ upload.orig_filename }}</h2>
+
+<div class="analysis-grid">
+  <div class="left">
+    <h3>Prediction</h3>
+    <p>Category: <strong>{{ upload.predicted_class }}</strong></p>
+    <p>Confidence: <strong>{{ "%.2f"|format(upload.confidence) }}%</strong></p>
+    <div class="conf-bar">
+      <div class="conf-fill" style="width:{{ "%.2f"|format(upload.confidence) }}%;"></div>
+    </div>
+
+    <h3>Probability Distribution</h3>
+    <canvas id="probChart" width="400" height="200"></canvas>
+
+    <h3>Basic Stats</h3>
+    <ul>
+      <li>Edge pixels detected: {{ upload.stats.edge_count }}</li>
+      <li>NDVI-like index (greenness): {{ "%.4f"|format(upload.stats.ndvi_mean) }}</li>
+      <li>Average color (BGR): Blue {{ upload.stats.mean_colors_bgr[0]|round(2) }}, Green {{ upload.stats.mean_colors_bgr[1]|round(2) }}, Red {{ upload.stats.mean_colors_bgr[2]|round(2) }}</li>
+    </ul>
+
+    <a class="btn" href="{{ url_for('history') }}">Back to History</a>
+  </div>
+
+  <div class="right">
+    <h3>Images</h3>
+    <div class="analysis-images">
+      <figure>
+        <figcaption>Original Image</figcaption>
+        <img src="{{ url_for('static', filename=upload.analysis_images['orig']) }}">
+      </figure>
+      <figure>
+        <figcaption>Grayscale</figcaption>
+        <img src="{{ url_for('static', filename=upload.analysis_images['gray']) }}">
+      </figure>
+      <figure>
+        <figcaption>Edge Detection</figcaption>
+        <img src="{{ url_for('static', filename=upload.analysis_images['edges']) }}">
+      </figure>
+      <figure>
+        <figcaption>NDVI-like (Greenness Map)</figcaption>
+        <img src="{{ url_for('static', filename=upload.analysis_images['ndvi']) }}">
+      </figure>
+      <figure>
+        <figcaption>Pixel Intensity Histogram</figcaption>
+        <img src="{{ url_for('static', filename=upload.analysis_images['hist']) }}">
+      </figure>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const probData = JSON.parse('{{ prob_dict | tojson | safe | replace("'", "\\'") }}');
+    if(probData && Object.keys(probData).length > 0){
+        const ctx = document.getElementById('probChart').getContext('2d');
+        const labels = Object.keys(probData);
+        const values = Object.values(probData);
+        const colors = labels.map((_, i) => `hsl(${i * 360 / labels.length}, 70%, 60%)`);
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ 
+                    label: 'Confidence (%)', 
+                    data: values, 
+                    backgroundColor: colors 
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+});
+</script>
+
+{% endblock %}
